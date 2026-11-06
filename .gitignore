@@ -1,0 +1,13 @@
+.git/
+*.zip
+*.log
+.env
+.env.*
+!.env.example
+node_modules/
+vendor/
+/project/.jdk/
+/project/android/.gradle/
+/project/android/**/build/
+/project/android/capacitor-cordova-android-plugins/
+*.apk

@@ -1,0 +1,10 @@
+{
+  "appId": "com.eventlist.app",
+  "appName": "Eventlist",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}
