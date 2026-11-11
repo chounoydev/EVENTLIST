@@ -1,0 +1,1 @@
+export const MAX_BCRYPT_PASSWORD_BYTES = 72

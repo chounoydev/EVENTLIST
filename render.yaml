@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: eventlist-api
+    runtime: node
+    plan: free
+    rootDir: eventlist-backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run migrate && npm run owner:create && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: OWNER_EMAIL
+        value: johndegamo45@gmail.com
+      - key: OWNER_NAME
+        sync: false
+      - key: OWNER_PASSWORD
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

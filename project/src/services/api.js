@@ -2,12 +2,15 @@ import axios from 'axios'
 
 const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim()
 const nativeBaseUrl = localStorage.getItem('eventlist_api_url')?.trim()
-const defaultBaseUrl = window.Capacitor?.isNativePlatform?.()
-  ? nativeBaseUrl
-  : `${window.location.protocol}//${window.location.hostname}:8000/api`
+const isLocalWebDevelopment = !window.Capacitor?.isNativePlatform?.()
+  && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+const defaultBaseUrl = isLocalWebDevelopment
+  ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+  : ''
+const apiBaseUrl = configuredBaseUrl || nativeBaseUrl || defaultBaseUrl
 
 const api = axios.create({
-  baseURL: configuredBaseUrl || nativeBaseUrl || defaultBaseUrl,
+  baseURL: apiBaseUrl || undefined,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -15,6 +18,12 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
+  if (!apiBaseUrl) {
+    return Promise.reject(new Error(
+      'Eventlist API is not configured. Set VITE_API_URL to the deployed API URL ending in /api, then rebuild the website or APK.',
+    ))
+  }
+
   const token = localStorage.getItem('eventlist_token')
 
   if (token) {

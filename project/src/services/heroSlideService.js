@@ -3,12 +3,12 @@ import api from './api'
 export const heroSlideService = {
   async getPublic() {
     const response = await api.get('/public/slides')
-    return response.data.data
+    return Array.isArray(response.data?.data) ? response.data.data : []
   },
 
   async getAll() {
     const response = await api.get('/admin/slides')
-    return response.data.data
+    return Array.isArray(response.data?.data) ? response.data.data : []
   },
 
   async create(slide) {

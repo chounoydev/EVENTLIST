@@ -1,5 +1,6 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
 import EventForm from './components/EventForm.vue';
+import EventLocationMap from './components/EventLocationMap.vue';
 import { adminService } from './services/adminService';
 import { authService } from './services/authService';
 import { eventService } from './services/eventService';
@@ -25,10 +26,7 @@ const forgotPasswordOpen = ref(false);
 const forgotPasswordEmail = ref('');
 const forgotPasswordLoading = ref(false);
 const forgotPasswordError = ref('');
-const forgotPasswordNewPassword = ref('');
-const forgotPasswordConfirmation = ref('');
-const forgotPasswordVisible = ref(false);
-const forgotConfirmationVisible = ref(false);
+const forgotPasswordSuccess = ref('');
 const resetPasswordOpen = ref(false);
 const resetPasswordLoading = ref(false);
 const resetPasswordError = ref('');
@@ -212,7 +210,7 @@ const upcomingCount = computed(() => upcomingEvents.value.length);
 const publicHeroSlides = computed(() => {
     if (!heroSlidesLoaded.value)
         return defaultPublicHeroSlides;
-    const activeSlides = heroSlides.value
+    const activeSlides = (Array.isArray(heroSlides.value) ? heroSlides.value : [])
         .filter((slide) => slide.is_active)
         .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id);
     return activeSlides.map((slide) => ({
@@ -268,6 +266,9 @@ function dateToIso(date) {
     return `${year}-${month}-${day}`;
 }
 function getErrorMessage(err) {
+    if (err.message?.startsWith('Eventlist API is not configured.')) {
+        return err.message;
+    }
     if (err.response?.status === 429) {
         const retryAfter = Number(err.response.headers?.['retry-after']);
         if (Number.isFinite(retryAfter) && retryAfter > 0) {
@@ -400,8 +401,7 @@ async function loadAdmins() {
 function openForgotPassword() {
     forgotPasswordEmail.value = authForm.email;
     forgotPasswordError.value = '';
-    forgotPasswordNewPassword.value = '';
-    forgotPasswordConfirmation.value = '';
+    forgotPasswordSuccess.value = '';
     forgotPasswordOpen.value = true;
 }
 function closeForgotPassword() {
@@ -412,14 +412,10 @@ function closeForgotPassword() {
 async function submitForgotPassword() {
     forgotPasswordLoading.value = true;
     forgotPasswordError.value = '';
+    forgotPasswordSuccess.value = '';
     try {
-        await authService.forgotPassword(forgotPasswordEmail.value, forgotPasswordNewPassword.value, forgotPasswordConfirmation.value);
-        forgotPasswordOpen.value = false;
-        forgotPasswordError.value = '';
-        forgotPasswordNewPassword.value = '';
-        forgotPasswordConfirmation.value = '';
-        authError.value = '';
-        authSuccess.value = 'Your password was updated. Sign in with your new password.';
+        const response = await authService.forgotPassword(forgotPasswordEmail.value);
+        forgotPasswordSuccess.value = response.message;
     }
     catch (err) {
         forgotPasswordError.value = getErrorMessage(err);
@@ -675,6 +671,17 @@ async function openEventDetails(event, trigger) {
     selectedEventDetails.value = event;
     await nextTick();
     eventDetailsCloseButton.value?.focus();
+}
+function hasPreciseEventLocation(event) {
+    return event?.latitude !== null && event?.latitude !== undefined
+        && event?.longitude !== null && event?.longitude !== undefined
+        && Number.isFinite(Number(event.latitude)) && Number.isFinite(Number(event.longitude));
+}
+function getEventDirectionsUrl(event) {
+    const destination = hasPreciseEventLocation(event)
+        ? `${event.latitude},${event.longitude}`
+        : event.location;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 function closeEventDetails() {
     const trigger = eventDetailsTrigger.value;
@@ -4153,132 +4160,44 @@ if (__VLS_ctx.forgotPasswordOpen) {
         /** @type {__VLS_StyleScopedClasses['auth-error']} */ ;
         (__VLS_ctx.forgotPasswordError);
     }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)({
-        ...{ onSubmit: (__VLS_ctx.submitForgotPassword) },
-        ...{ class: "auth-form" },
-    });
-    /** @type {__VLS_StyleScopedClasses['auth-form']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
-        ...{ class: "auth-field" },
-    });
-    /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
-        type: "email",
-        autocomplete: "email",
-        maxlength: "255",
-        placeholder: "you@example.com",
-        required: true,
-    });
-    (__VLS_ctx.forgotPasswordEmail);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
-        ...{ class: "auth-field" },
-    });
-    /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "password-input-wrap" },
-    });
-    /** @type {__VLS_StyleScopedClasses['password-input-wrap']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
-        type: (__VLS_ctx.forgotPasswordVisible ? 'text' : 'password'),
-        autocomplete: "new-password",
-        minlength: "8",
-        maxlength: "255",
-        placeholder: "At least 8 characters",
-        required: true,
-    });
-    (__VLS_ctx.forgotPasswordNewPassword);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.forgotPasswordOpen))
-                    throw 0;
-                return (__VLS_ctx.forgotPasswordVisible = !__VLS_ctx.forgotPasswordVisible);
-                // @ts-ignore
-                [forgotPasswordOpen, closeForgotPassword, closeForgotPassword, closeForgotPassword, forgotPasswordError, forgotPasswordError, submitForgotPassword, forgotPasswordEmail, forgotPasswordVisible, forgotPasswordVisible, forgotPasswordVisible, forgotPasswordNewPassword,];
-            } },
-        ...{ class: "password-toggle" },
-        type: "button",
-        'aria-label': (__VLS_ctx.forgotPasswordVisible ? 'Hide new password' : 'Show new password'),
-    });
-    /** @type {__VLS_StyleScopedClasses['password-toggle']} */ ;
-    if (__VLS_ctx.forgotPasswordVisible) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-            viewBox: "0 0 24 24",
+    if (__VLS_ctx.forgotPasswordSuccess) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "auth-success" },
+            role: "status",
+        });
+        /** @type {__VLS_StyleScopedClasses['auth-success']} */ ;
+        (__VLS_ctx.forgotPasswordSuccess);
+    }
+    if (!__VLS_ctx.forgotPasswordSuccess) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)({
+            ...{ onSubmit: (__VLS_ctx.submitForgotPassword) },
+            ...{ class: "auth-form" },
+        });
+        /** @type {__VLS_StyleScopedClasses['auth-form']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
+            ...{ class: "auth-field" },
+        });
+        /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+        __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+            type: "email",
+            autocomplete: "email",
+            maxlength: "255",
+            placeholder: "you@example.com",
+            required: true,
+        });
+        (__VLS_ctx.forgotPasswordEmail);
+        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+            ...{ class: "auth-submit" },
+            type: "submit",
+            disabled: (__VLS_ctx.forgotPasswordLoading),
+        });
+        /** @type {__VLS_StyleScopedClasses['auth-submit']} */ ;
+        (__VLS_ctx.forgotPasswordLoading ? 'Sending…' : 'Send reset link');
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
             'aria-hidden': "true",
         });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
-            d: "M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.4 4.3A10.8 10.8 0 0112 4c5.5 0 9 4.8 9 8-.2 1.3-.9 2.7-1.9 3.8M6.2 6.2C4.2 7.6 3.1 9.6 3 12c0 3.2 3.5 8 9 8 1.2 0 2.4-.2 3.4-.7",
-        });
     }
-    else {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-            viewBox: "0 0 24 24",
-            'aria-hidden': "true",
-        });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
-            d: "M3 12s3.5-8 9-8 9 8 9 8-3.5 8-9 8-9-8-9-8zM12 15a3 3 0 100-6 3 3 0 000 6z",
-        });
-    }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
-        ...{ class: "auth-field" },
-    });
-    /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "password-input-wrap" },
-    });
-    /** @type {__VLS_StyleScopedClasses['password-input-wrap']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
-        type: (__VLS_ctx.forgotConfirmationVisible ? 'text' : 'password'),
-        autocomplete: "new-password",
-        minlength: "8",
-        maxlength: "255",
-        placeholder: "Enter the new password again",
-        required: true,
-    });
-    (__VLS_ctx.forgotPasswordConfirmation);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.forgotPasswordOpen))
-                    throw 0;
-                return (__VLS_ctx.forgotConfirmationVisible = !__VLS_ctx.forgotConfirmationVisible);
-                // @ts-ignore
-                [forgotPasswordVisible, forgotPasswordVisible, forgotConfirmationVisible, forgotConfirmationVisible, forgotConfirmationVisible, forgotPasswordConfirmation,];
-            } },
-        ...{ class: "password-toggle" },
-        type: "button",
-        'aria-label': (__VLS_ctx.forgotConfirmationVisible ? 'Hide confirmed password' : 'Show confirmed password'),
-    });
-    /** @type {__VLS_StyleScopedClasses['password-toggle']} */ ;
-    if (__VLS_ctx.forgotConfirmationVisible) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-            viewBox: "0 0 24 24",
-            'aria-hidden': "true",
-        });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
-            d: "M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.4 4.3A10.8 10.8 0 0112 4c5.5 0 9 4.8 9 8-.2 1.3-.9 2.7-1.9 3.8M6.2 6.2C4.2 7.6 3.1 9.6 3 12c0 3.2 3.5 8 9 8 1.2 0 2.4-.2 3.4-.7",
-        });
-    }
-    else {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-            viewBox: "0 0 24 24",
-            'aria-hidden': "true",
-        });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
-            d: "M3 12s3.5-8 9-8 9 8 9 8-3.5 8-9 8-9-8-9-8zM12 15a3 3 0 100-6 3 3 0 000 6z",
-        });
-    }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ class: "auth-submit" },
-        type: "submit",
-        disabled: (__VLS_ctx.forgotPasswordLoading),
-    });
-    /** @type {__VLS_StyleScopedClasses['auth-submit']} */ ;
-    (__VLS_ctx.forgotPasswordLoading ? 'Updating…' : 'Update password');
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        'aria-hidden': "true",
-    });
 }
 if (__VLS_ctx.resetPasswordOpen) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
@@ -4359,7 +4278,7 @@ if (__VLS_ctx.resetPasswordOpen) {
                         throw 0;
                     return (__VLS_ctx.resetPasswordVisible = !__VLS_ctx.resetPasswordVisible);
                     // @ts-ignore
-                    [forgotConfirmationVisible, forgotConfirmationVisible, forgotPasswordLoading, forgotPasswordLoading, resetPasswordOpen, closeResetPassword, closeResetPassword, resetPasswordError, resetPasswordError, resetPasswordSuccess, resetPasswordSuccess, resetPasswordSuccess, submitResetPassword, resetPasswordVisible, resetPasswordVisible, resetPasswordVisible, resetPasswordForm,];
+                    [forgotPasswordOpen, closeForgotPassword, closeForgotPassword, closeForgotPassword, forgotPasswordError, forgotPasswordError, forgotPasswordSuccess, forgotPasswordSuccess, forgotPasswordSuccess, submitForgotPassword, forgotPasswordEmail, forgotPasswordLoading, forgotPasswordLoading, resetPasswordOpen, closeResetPassword, closeResetPassword, resetPasswordError, resetPasswordError, resetPasswordSuccess, resetPasswordSuccess, resetPasswordSuccess, submitResetPassword, resetPasswordVisible, resetPasswordVisible, resetPasswordVisible, resetPasswordForm,];
                 } },
             ...{ class: "password-toggle" },
             type: "button",
@@ -4582,6 +4501,53 @@ if (__VLS_ctx.selectedEventDetails) {
         __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
         (Number(__VLS_ctx.selectedEventDetails.capacity).toLocaleString());
     }
+    __VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
+        ...{ class: "event-details-map-section" },
+        'aria-labelledby': "event-location-map-title",
+    });
+    /** @type {__VLS_StyleScopedClasses['event-details-map-section']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "event-details-map-heading" },
+    });
+    /** @type {__VLS_StyleScopedClasses['event-details-map-heading']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+    __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+        id: "event-location-map-title",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({});
+    (__VLS_ctx.selectedEventDetails.location);
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "event-map-provider" },
+    });
+    /** @type {__VLS_StyleScopedClasses['event-map-provider']} */ ;
+    if (__VLS_ctx.hasPreciseEventLocation(__VLS_ctx.selectedEventDetails)) {
+        const __VLS_14 = EventLocationMap;
+        // @ts-ignore
+        const __VLS_15 = __VLS_asFunctionalComponent1(__VLS_14, new __VLS_14({
+            latitude: (Number(__VLS_ctx.selectedEventDetails.latitude)),
+            longitude: (Number(__VLS_ctx.selectedEventDetails.longitude)),
+        }));
+        const __VLS_16 = __VLS_15({
+            latitude: (Number(__VLS_ctx.selectedEventDetails.latitude)),
+            longitude: (Number(__VLS_ctx.selectedEventDetails.longitude)),
+        }, ...__VLS_functionalComponentArgsRest(__VLS_15));
+    }
+    else {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+            ...{ class: "event-details-map-missing" },
+        });
+        /** @type {__VLS_StyleScopedClasses['event-details-map-missing']} */ ;
+    }
+    __VLS_asFunctionalElement1(__VLS_intrinsics.a, __VLS_intrinsics.a)({
+        ...{ class: "event-details-directions" },
+        href: (__VLS_ctx.getEventDirectionsUrl(__VLS_ctx.selectedEventDetails)),
+        target: "_blank",
+        rel: "noopener noreferrer",
+    });
+    /** @type {__VLS_StyleScopedClasses['event-details-directions']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        'aria-hidden': "true",
+    });
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "event-details-actions" },
     });
@@ -4602,6 +4568,6 @@ if (__VLS_ctx.selectedEventDetails) {
     /** @type {__VLS_StyleScopedClasses['event-details-done']} */ ;
 }
 // @ts-ignore
-[user, user, formatDate, formatDate, formatTime, isNewAnnouncement, isNewAnnouncement, eventStatus, closeResetPassword, resetConfirmationVisible, resetConfirmationVisible, resetPasswordLoading, resetPasswordLoading, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, closeEventDetails, closeEventDetails, closeEventDetails, closeEventDetails, editEventFromDetails,];
+[user, user, formatDate, formatDate, formatTime, isNewAnnouncement, isNewAnnouncement, eventStatus, closeResetPassword, resetConfirmationVisible, resetConfirmationVisible, resetPasswordLoading, resetPasswordLoading, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, selectedEventDetails, closeEventDetails, closeEventDetails, closeEventDetails, closeEventDetails, hasPreciseEventLocation, getEventDirectionsUrl, editEventFromDetails,];
 const __VLS_export = (await import('vue')).defineComponent({});
 export default {};

@@ -9,13 +9,14 @@
     "preview": "vite preview",
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:apk": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug"
+    "android:apk": "node scripts/require-api-url.mjs && npm run android:sync && cd android && .\\gradlew.bat assembleDebug && copy /Y app\\build\\outputs\\apk\\debug\\app-debug.apk ..\\public\\eventlist-app-debug.apk"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "axios": "^1.20.0",
+    "mapbox-gl": "^3.34.2",
     "vue": "^3.5.21"
   },
   "devDependencies": {

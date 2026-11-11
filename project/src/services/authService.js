@@ -22,12 +22,8 @@ export const authService = {
     await api.post('/logout')
   },
 
-  async forgotPassword(email, password, passwordConfirmation) {
-    const response = await api.post('/forgot-password', {
-      email,
-      password,
-      password_confirmation: passwordConfirmation,
-    })
+  async forgotPassword(email) {
+    const response = await api.post('/forgot-password', { email })
     return response.data
   },
 

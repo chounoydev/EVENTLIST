@@ -28,12 +28,12 @@ function toFormData(event, method = null) {
 export const eventService = {
   async getPublic() {
     const response = await api.get('/public/events')
-    return response.data.data
+    return Array.isArray(response.data?.data) ? response.data.data : []
   },
 
   async getAll() {
     const response = await api.get('/events')
-    return response.data.data
+    return Array.isArray(response.data?.data) ? response.data.data : []
   },
 
   async create(event) {

@@ -3,7 +3,7 @@ import api from './api'
 export const adminService = {
   async getAll() {
     const response = await api.get('/admin/admins')
-    return response.data.data
+    return Array.isArray(response.data?.data) ? response.data.data : []
   },
 
   async create(admin) {

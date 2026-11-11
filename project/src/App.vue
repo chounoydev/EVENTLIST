@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import EventForm from './components/EventForm.vue'
+import EventLocationMap from './components/EventLocationMap.vue'
 import { adminService } from './services/adminService'
 import { authService } from './services/authService'
 import { eventService } from './services/eventService'
@@ -27,10 +28,7 @@ const forgotPasswordOpen = ref(false)
 const forgotPasswordEmail = ref('')
 const forgotPasswordLoading = ref(false)
 const forgotPasswordError = ref('')
-const forgotPasswordNewPassword = ref('')
-const forgotPasswordConfirmation = ref('')
-const forgotPasswordVisible = ref(false)
-const forgotConfirmationVisible = ref(false)
+const forgotPasswordSuccess = ref('')
 const resetPasswordOpen = ref(false)
 const resetPasswordLoading = ref(false)
 const resetPasswordError = ref('')
@@ -227,7 +225,7 @@ const upcomingCount = computed(() => upcomingEvents.value.length)
 const publicHeroSlides = computed(() => {
   if (!heroSlidesLoaded.value) return defaultPublicHeroSlides
 
-  const activeSlides = heroSlides.value
+  const activeSlides = (Array.isArray(heroSlides.value) ? heroSlides.value : [])
     .filter((slide) => slide.is_active)
     .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id)
 
@@ -301,6 +299,10 @@ function dateToIso(date) {
 }
 
 function getErrorMessage(err) {
+  if (err.message?.startsWith('Eventlist API is not configured.')) {
+    return err.message
+  }
+
   if (err.response?.status === 429) {
     const retryAfter = Number(err.response.headers?.['retry-after'])
     if (Number.isFinite(retryAfter) && retryAfter > 0) {
@@ -446,8 +448,7 @@ async function loadAdmins() {
 function openForgotPassword() {
   forgotPasswordEmail.value = authForm.email
   forgotPasswordError.value = ''
-  forgotPasswordNewPassword.value = ''
-  forgotPasswordConfirmation.value = ''
+  forgotPasswordSuccess.value = ''
   forgotPasswordOpen.value = true
 }
 
@@ -460,19 +461,11 @@ function closeForgotPassword() {
 async function submitForgotPassword() {
   forgotPasswordLoading.value = true
   forgotPasswordError.value = ''
+  forgotPasswordSuccess.value = ''
 
   try {
-    await authService.forgotPassword(
-      forgotPasswordEmail.value,
-      forgotPasswordNewPassword.value,
-      forgotPasswordConfirmation.value,
-    )
-    forgotPasswordOpen.value = false
-    forgotPasswordError.value = ''
-    forgotPasswordNewPassword.value = ''
-    forgotPasswordConfirmation.value = ''
-    authError.value = ''
-    authSuccess.value = 'Your password was updated. Sign in with your new password.'
+    const response = await authService.forgotPassword(forgotPasswordEmail.value)
+    forgotPasswordSuccess.value = response.message
   } catch (err) {
     forgotPasswordError.value = getErrorMessage(err)
   } finally {
@@ -738,6 +731,19 @@ async function openEventDetails(event, trigger) {
   selectedEventDetails.value = event
   await nextTick()
   eventDetailsCloseButton.value?.focus()
+}
+
+function hasPreciseEventLocation(event) {
+  return event?.latitude !== null && event?.latitude !== undefined
+    && event?.longitude !== null && event?.longitude !== undefined
+    && Number.isFinite(Number(event.latitude)) && Number.isFinite(Number(event.longitude))
+}
+
+function getEventDirectionsUrl(event) {
+  const destination = hasPreciseEventLocation(event)
+    ? `${event.latitude},${event.longitude}`
+    : event.location
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
 }
 
 function closeEventDetails() {
@@ -1776,35 +1782,16 @@ onUnmounted(() => {
       <button class="password-modal-close" type="button" aria-label="Close forgot password" @click="closeForgotPassword">×</button>
       <p class="eyebrow">ACCOUNT RECOVERY</p>
       <h3 id="forgot-password-title">Forgot your password?</h3>
-      <p class="password-modal-subtitle">Enter your email address, then create and confirm your new password.</p>
+      <p class="password-modal-subtitle">Enter your email address and we’ll send you a secure password reset link.</p>
       <div v-if="forgotPasswordError" class="auth-error" role="alert">{{ forgotPasswordError }}</div>
-      <form class="auth-form" @submit.prevent="submitForgotPassword">
+      <div v-if="forgotPasswordSuccess" class="auth-success" role="status">{{ forgotPasswordSuccess }}</div>
+      <form v-if="!forgotPasswordSuccess" class="auth-form" @submit.prevent="submitForgotPassword">
         <label class="auth-field">
           <span>Email address</span>
           <input v-model.trim="forgotPasswordEmail" type="email" autocomplete="email" maxlength="255" placeholder="you@example.com" required />
         </label>
-        <label class="auth-field">
-          <span>New password</span>
-          <span class="password-input-wrap">
-            <input v-model="forgotPasswordNewPassword" :type="forgotPasswordVisible ? 'text' : 'password'" autocomplete="new-password" minlength="8" maxlength="255" placeholder="At least 8 characters" required />
-            <button class="password-toggle" type="button" :aria-label="forgotPasswordVisible ? 'Hide new password' : 'Show new password'" @click="forgotPasswordVisible = !forgotPasswordVisible">
-              <svg v-if="forgotPasswordVisible" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.4 4.3A10.8 10.8 0 0112 4c5.5 0 9 4.8 9 8-.2 1.3-.9 2.7-1.9 3.8M6.2 6.2C4.2 7.6 3.1 9.6 3 12c0 3.2 3.5 8 9 8 1.2 0 2.4-.2 3.4-.7" /></svg>
-              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-8 9-8 9 8 9 8-3.5 8-9 8-9-8-9-8zM12 15a3 3 0 100-6 3 3 0 000 6z" /></svg>
-            </button>
-          </span>
-        </label>
-        <label class="auth-field">
-          <span>Confirm password</span>
-          <span class="password-input-wrap">
-            <input v-model="forgotPasswordConfirmation" :type="forgotConfirmationVisible ? 'text' : 'password'" autocomplete="new-password" minlength="8" maxlength="255" placeholder="Enter the new password again" required />
-            <button class="password-toggle" type="button" :aria-label="forgotConfirmationVisible ? 'Hide confirmed password' : 'Show confirmed password'" @click="forgotConfirmationVisible = !forgotConfirmationVisible">
-              <svg v-if="forgotConfirmationVisible" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.4 4.3A10.8 10.8 0 0112 4c5.5 0 9 4.8 9 8-.2 1.3-.9 2.7-1.9 3.8M6.2 6.2C4.2 7.6 3.1 9.6 3 12c0 3.2 3.5 8 9 8 1.2 0 2.4-.2 3.4-.7" /></svg>
-              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-8 9-8 9 8 9 8-3.5 8-9 8-9-8-9-8zM12 15a3 3 0 100-6 3 3 0 000 6z" /></svg>
-            </button>
-          </span>
-        </label>
         <button class="auth-submit" type="submit" :disabled="forgotPasswordLoading">
-          {{ forgotPasswordLoading ? 'Updating…' : 'Update password' }}
+          {{ forgotPasswordLoading ? 'Sending…' : 'Send reset link' }}
           <span aria-hidden="true">→</span>
         </button>
       </form>
@@ -1883,6 +1870,31 @@ onUnmounted(() => {
             <span><small>Capacity</small><strong>{{ Number(selectedEventDetails.capacity).toLocaleString() }} spaces</strong></span>
           </div>
         </div>
+        <section class="event-details-map-section" aria-labelledby="event-location-map-title">
+          <div class="event-details-map-heading">
+            <div>
+              <h3 id="event-location-map-title">Event location</h3>
+              <p>{{ selectedEventDetails.location }}</p>
+            </div>
+            <span class="event-map-provider">Mapbox</span>
+          </div>
+          <EventLocationMap
+            v-if="hasPreciseEventLocation(selectedEventDetails)"
+            :latitude="Number(selectedEventDetails.latitude)"
+            :longitude="Number(selectedEventDetails.longitude)"
+          />
+          <p v-else class="event-details-map-missing">
+            This event does not have a verified map pin yet. Ask the organizer to update its exact location.
+          </p>
+          <a
+            class="event-details-directions"
+            :href="getEventDirectionsUrl(selectedEventDetails)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Get directions <span aria-hidden="true">→</span>
+          </a>
+        </section>
         <div class="event-details-actions">
           <button v-if="user?.role === 'owner' || user?.role === 'admin'" type="button" class="event-details-edit" @click="editEventFromDetails">Edit event</button>
           <button type="button" class="event-details-done" @click="closeEventDetails">Close details</button>
@@ -2311,6 +2323,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .event-details-facts > div > span:last-child { min-width: 0; display: grid; gap: 4px; }
 .event-details-facts small { color: #89978f; font-size: 10px; }
 .event-details-facts strong { color: #334e42; font-size: 11px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.event-details-map-section { display: grid; gap: 11px; margin-top: 21px; }
+.event-details-map-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.event-details-map-heading h3 { margin: 0; color: #263f35; font-size: 14px; }
+.event-details-map-heading p { margin: 4px 0 0; color: #718078; font-size: 11px; line-height: 1.5; }
+.event-map-provider { flex: 0 0 auto; padding: 5px 8px; border: 1px solid #dfe9e3; border-radius: 20px; color: #526e60; font-size: 9px; font-weight: 700; }
+.event-details-map-missing { margin: 0; padding: 15px; border: 1px dashed #d6e2d9; border-radius: 8px; background: #f7faf7; color: #718078; font-size: 11px; line-height: 1.55; }
+.event-details-directions { justify-self: start; display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border-radius: 6px; background: #edf6ef; color: #286453; font-size: 11px; font-weight: 700; text-decoration: none; }
+.event-details-directions:hover { background: #e1efe4; }
+.event-details-directions span { font-size: 14px; }
 .event-details-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 19px; }
 .event-details-actions button { min-height: 38px; padding: 0 14px; border: 1px solid #dce7df; border-radius: 6px; background: #fff; color: #456457; font-size: 11px; font-weight: 700; }
 .event-details-actions .event-details-edit { border-color: #286453; background: #286453; color: white; }

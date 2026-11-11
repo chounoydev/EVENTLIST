@@ -1,0 +1,87 @@
+{
+  "info": {
+    "_postman_id": "46f1d61c-1d3c-4dbc-bda3-e550c08881a6",
+    "name": "Eventlist API (Local)",
+    "description": "Requests for testing the Eventlist backend. Set baseUrl to the deployed API URL when available. Register creates a real account in the connected database; use a unique test email.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/health"
+        }
+      }
+    },
+    {
+      "name": "Register account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Test User\",\n  \"email\": \"replace-with-a-unique-test-email@example.com\",\n  \"password\": \"ReplaceWithStrongPassword123!\",\n  \"password_confirmation\": \"ReplaceWithStrongPassword123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/register"
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"replace-with-a-test-email@example.com\",\n  \"password\": \"ReplaceWithStrongPassword123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/login"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api"
+    }
+  ]
+}
