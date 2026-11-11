@@ -37,16 +37,12 @@ export const eventService = {
   },
 
   async create(event) {
-    const response = await api.post('/events', toFormData(event), {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await api.post('/events', toFormData(event))
     return response.data.data
   },
 
   async update(id, event) {
-    const response = await api.post(`/events/${id}`, toFormData(event, 'PUT'), {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await api.post(`/events/${id}`, toFormData(event, 'PUT'))
     return response.data.data
   },
 

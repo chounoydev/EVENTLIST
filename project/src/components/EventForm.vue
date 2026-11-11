@@ -14,6 +14,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  error: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['submit', 'cancel'])
@@ -310,6 +314,8 @@ function removeCoverImage() {
 }
 
 function submitForm() {
+  if (props.loading) return
+
   if (!form.location.trim() && !selectedRegionCode.value) {
     locationError.value = 'Enter a venue or address, or select its Philippine region.'
     return
@@ -357,6 +363,7 @@ onBeforeUnmount(clearPreview)
     <div class="form-header">
       <p class="form-kicker">EVENT DETAILS</p>
       <h2>{{ initialEvent ? 'Edit event' : 'Create event' }}</h2>
+      <p v-if="error" class="form-submit-error" role="alert">{{ error }}</p>
     </div>
 
     <div class="form-fields">
@@ -486,7 +493,7 @@ onBeforeUnmount(clearPreview)
           v-model.number="form.capacity"
           type="number"
           min="0"
-          max="4294967295"
+          max="2147483647"
           required
         />
       </label>
@@ -549,6 +556,18 @@ onBeforeUnmount(clearPreview)
 .form-header {
   display: grid;
   gap: 5px;
+}
+
+.form-submit-error {
+  margin: 4px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #e8c5bd;
+  border-radius: 5px;
+  background: #fff7f5;
+  color: #963b2f;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .form-kicker {

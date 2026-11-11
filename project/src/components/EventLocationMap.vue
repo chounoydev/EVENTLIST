@@ -66,6 +66,9 @@ async function createMap() {
       maxBounds: [[116, 4], [127, 21.5]],
       attributionControl: true,
     })
+    map.once('load', () => {
+      if (!unmounted) map?.resize()
+    })
     if (hasCoordinates) {
       marker = new mapboxgl.Marker({ color: '#0c5848', draggable: props.interactive })
         .setLngLat(currentCoordinates())

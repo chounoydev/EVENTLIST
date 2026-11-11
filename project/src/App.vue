@@ -16,6 +16,7 @@ const managedHeroSlides = ref([])
 const admins = ref([])
 const loading = ref(false)
 const saving = ref(false)
+const formError = ref('')
 const signingIn = ref(false)
 const sessionLoading = ref(true)
 const error = ref('')
@@ -710,6 +711,7 @@ function openCreateForm() {
   editingEvent.value = null
   showForm.value = true
   error.value = ''
+  formError.value = ''
   navigateToPage('create-event')
 }
 
@@ -717,12 +719,14 @@ function openEditForm(event) {
   editingEvent.value = { ...event }
   showForm.value = true
   error.value = ''
+  formError.value = ''
   navigateToPage('create-event')
 }
 
 function cancelEventForm() {
   showForm.value = false
   editingEvent.value = null
+  formError.value = ''
   navigateToPage('events')
 }
 
@@ -760,8 +764,10 @@ function editEventFromDetails() {
 }
 
 async function saveEvent(formData) {
+  if (saving.value) return
+
   saving.value = true
-  error.value = ''
+  formError.value = ''
 
   try {
     if (editingEvent.value) {
@@ -772,10 +778,11 @@ async function saveEvent(formData) {
 
     showForm.value = false
     editingEvent.value = null
+    formError.value = ''
     navigateToPage('events')
     await loadEvents()
   } catch (err) {
-    error.value = getErrorMessage(err)
+    formError.value = getErrorMessage(err)
   } finally {
     saving.value = false
   }
@@ -1479,6 +1486,7 @@ onUnmounted(() => {
           <EventForm
             :initial-event="editingEvent"
             :loading="saving"
+            :error="formError"
             @submit="saveEvent"
             @cancel="cancelEventForm"
           />
