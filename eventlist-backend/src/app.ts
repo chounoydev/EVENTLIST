@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import cors from 'cors'
-import express, { type Request, type Response } from 'express'
-import rateLimit from 'express-rate-limit'
+import express, { type Request, type RequestHandler, type Response } from 'express'
+import { rateLimit } from 'express-rate-limit'
 import { fileTypeFromBuffer } from 'file-type'
-import helmet from 'helmet'
 import multer from 'multer'
 import {
   authenticate,
@@ -30,6 +30,10 @@ import {
   registerSchema,
   resetPasswordSchema,
 } from './validation.js'
+
+const helmet = createRequire(import.meta.url)('helmet') as (
+  options: { crossOriginResourcePolicy: { policy: 'cross-origin' } }
+) => RequestHandler
 
 interface EventRow {
   id: number
